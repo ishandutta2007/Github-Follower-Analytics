@@ -7,28 +7,30 @@ import time
 import json
 
 GITHUB_USERNAME = 'ishandutta2007'  # Target username
-CACHE_FILE = 'github_cache.json'
+FOLLOWERS_CACHE_FILE = 'followers_cache.json'
+USERS_CACHE_FILE = 'users_cache.json'
+CACHE_EXPIRY_24H = 24 * 60 * 60  # 24 hours in seconds
 
 load_dotenv()
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN")
 
-def load_cache():
-    """Loads the local cache from a JSON file."""
-    if os.path.exists(CACHE_FILE):
+def load_json_file(file_path, default_value):
+    """Utility to load a JSON file with a default value on failure."""
+    if os.path.exists(file_path):
         try:
-            with open(CACHE_FILE, 'r') as f:
+            with open(file_path, 'r') as f:
                 return json.load(f)
         except Exception as e:
-            print(f"Error loading cache: {e}")
-    return {"followers_list": {}, "user_details": {}}
+            print(f"Error loading {file_path}: {e}")
+    return default_value
 
-def save_cache(cache):
-    """Saves the cache to a JSON file."""
+def save_json_file(file_path, data):
+    """Utility to save data to a JSON file."""
     try:
-        with open(CACHE_FILE, 'w') as f:
-            json.dump(cache, f, indent=4)
+        with open(file_path, 'w') as f:
+            json.dump(data, f, indent=4)
     except Exception as e:
-        print(f"Error saving cache: {e}")
+        print(f"Error saving {file_path}: {e}")
 
 def get_headers():
     """Returns headers with auth if token is provided."""
@@ -37,18 +39,24 @@ def get_headers():
         headers['Authorization'] = f'token {ADMIN_TOKEN}'
     return headers
 
-def get_followers(username, cache):
-    """Fetches all followers for a given user (handles pagination and caching)."""
-    # Check if we already have the followers list for this user cached
-    if username in cache["followers_list"]:
-        print(f"Using cached followers list for {username}...")
-        return cache["followers_list"][username]
+def get_followers(username, followers_cache):
+    """Fetches followers with a 24-hour time-based cache."""
+    current_time = time.time()
+    
+    if username in followers_cache:
+        cached_data = followers_cache[username]
+        # Check if cache is still valid (less than 24 hours old)
+        if current_time - cached_data.get('timestamp', 0) < CACHE_EXPIRY_24H:
+            print(f"Using cached followers list for {username} (fetched recently)...")
+            return cached_data['data']
+        else:
+            print(f"Cached followers list for {username} is older than 24h. Refreshing...")
 
     followers = []
     page = 1
     url = f"https://api.github.com/users/{username}/followers"
     
-    print(f"Fetching followers for {username}...")
+    print(f"Fetching followers for {username} from GitHub API...")
     while True:
         params = {'per_page': 100, 'page': page}
         response = requests.get(url, headers=get_headers(), params=params)
@@ -66,26 +74,31 @@ def get_followers(username, cache):
         page += 1
         
     if followers:
-        cache["followers_list"][username] = followers
-        save_cache(cache)
+        followers_cache[username] = {
+            "timestamp": current_time,
+            "data": followers
+        }
+        save_json_file(FOLLOWERS_CACHE_FILE, followers_cache)
 
     return followers
 
-def get_user_details(follower_url, cache):
-    """Fetches detailed profile info for a single follower with caching."""
-    if follower_url in cache["user_details"]:
-        return cache["user_details"][follower_url]
+def get_user_details(username, follower_url, users_cache):
+    """Fetches detailed profile info with idempotent caching by username."""
+    if username in users_cache:
+        print(f"  [CACHE] {username}")
+        return users_cache[username]
 
+    print(f"  [API] {username}...")
     try:
         response = requests.get(follower_url, headers=get_headers())
         if response.status_code == 200:
             details = response.json()
-            cache["user_details"][follower_url] = details
+            users_cache[username] = details
             return details
         elif response.status_code == 403:
              print("Rate limit hit! Sleeping for 60 seconds...")
              time.sleep(60)
-             return get_user_details(follower_url, cache) # Retry
+             return get_user_details(username, follower_url, users_cache) # Retry
     except Exception as e:
         print(f"Error: {e}")
     return None
@@ -116,7 +129,6 @@ def plot_demographics(locations):
     counts = Counter(locations)
     
     # Sort and separate top locations from "Other"
-    # Show top 10 locations, group the rest as "Other"
     total_followers = sum(counts.values())
     sorted_locs = counts.most_common()
     
@@ -141,16 +153,17 @@ def plot_demographics(locations):
     plt.figure(figsize=(10, 7))
     plt.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=140, colors=plt.cm.Paired.colors)
     plt.title(f"Follower Demographics (Location) for {GITHUB_USERNAME}\n(Sample Size: {total_followers})")
-    plt.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+    plt.axis('equal')
     plt.tight_layout()
     plt.show()
 
 def main():
-    # 0. Load cache
-    cache = load_cache()
+    # 0. Load caches
+    followers_cache = load_json_file(FOLLOWERS_CACHE_FILE, {})
+    users_cache = load_json_file(USERS_CACHE_FILE, {})
 
     # 1. Get list of followers
-    followers_list = get_followers(GITHUB_USERNAME, cache)
+    followers_list = get_followers(GITHUB_USERNAME, followers_cache)
     print(f"Total followers found: {len(followers_list)}")
     
     if not followers_list:
@@ -158,23 +171,26 @@ def main():
 
     # 2. Fetch details for each follower to get 'location'
     locations = []
-    print("Fetching follower details (using cache where available)...")
+    print("Fetching follower details (using idempotent cache where available)...")
     
     for i, follower in enumerate(followers_list):
-        details = get_user_details(follower['url'], cache)
+        login = follower['login']
+        url = follower['url']
+        
+        details = get_user_details(login, url, users_cache)
         if details:
             loc = clean_location(details.get('location'))
             locations.append(loc)
         
-        # Save cache every 50 records to prevent data loss on long runs
+        # Save users cache every 50 records to prevent data loss
         if (i + 1) % 50 == 0:
-            save_cache(cache)
+            save_json_file(USERS_CACHE_FILE, users_cache)
             print(f"  Processed {i + 1}/{len(followers_list)} profiles (Cache saved)...")
         elif (i + 1) % 10 == 0:
             print(f"  Processed {i + 1}/{len(followers_list)} profiles...")
 
     # Final cache save
-    save_cache(cache)
+    save_json_file(USERS_CACHE_FILE, users_cache)
 
     # 3. Plot the data
     print("Plotting data...")

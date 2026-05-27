@@ -4,4 +4,6 @@ temp_repo_clone
 *.bak
 *.env
 contributors.txt
-github_cache.json
+followers_cache.json
+users_cache.json
+old_github_cache.json
