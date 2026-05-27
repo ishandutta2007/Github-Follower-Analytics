@@ -12,6 +12,7 @@
 ## 🚀 Features
 
 - **Automated Data Fetching**: Retrieves all followers for any given GitHub username, handling pagination automatically.
+- **Local Caching**: Stores follower lists and profile details in `github_cache.json` to minimize API calls and drastically speed up subsequent runs.
 - **Location Normalization**: Cleans and normalizes location strings (e.g., "US", "USA", "United States" -> "United States") for accurate reporting.
 - **Visual Analytics**: Generates a beautiful pie chart showing the top geographical regions of your followers.
 - **Rate Limit Management**: Includes built-in sleep logic to handle GitHub API rate limits gracefully.

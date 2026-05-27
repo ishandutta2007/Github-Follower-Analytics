@@ -4,11 +4,31 @@ import matplotlib.pyplot as plt
 import os
 import requests
 import time
+import json
 
 GITHUB_USERNAME = 'ishandutta2007'  # Target username
+CACHE_FILE = 'github_cache.json'
 
 load_dotenv()
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN")
+
+def load_cache():
+    """Loads the local cache from a JSON file."""
+    if os.path.exists(CACHE_FILE):
+        try:
+            with open(CACHE_FILE, 'r') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Error loading cache: {e}")
+    return {"followers_list": {}, "user_details": {}}
+
+def save_cache(cache):
+    """Saves the cache to a JSON file."""
+    try:
+        with open(CACHE_FILE, 'w') as f:
+            json.dump(cache, f, indent=4)
+    except Exception as e:
+        print(f"Error saving cache: {e}")
 
 def get_headers():
     """Returns headers with auth if token is provided."""
@@ -17,8 +37,13 @@ def get_headers():
         headers['Authorization'] = f'token {ADMIN_TOKEN}'
     return headers
 
-def get_followers(username):
-    """Fetches all followers for a given user (handles pagination)."""
+def get_followers(username, cache):
+    """Fetches all followers for a given user (handles pagination and caching)."""
+    # Check if we already have the followers list for this user cached
+    if username in cache["followers_list"]:
+        print(f"Using cached followers list for {username}...")
+        return cache["followers_list"][username]
+
     followers = []
     page = 1
     url = f"https://api.github.com/users/{username}/followers"
@@ -40,18 +65,27 @@ def get_followers(username):
         print(f"  Found {len(data)} followers on page {page}...")
         page += 1
         
+    if followers:
+        cache["followers_list"][username] = followers
+        save_cache(cache)
+
     return followers
 
-def get_user_details(follower_url):
-    """Fetches detailed profile info for a single follower."""
+def get_user_details(follower_url, cache):
+    """Fetches detailed profile info for a single follower with caching."""
+    if follower_url in cache["user_details"]:
+        return cache["user_details"][follower_url]
+
     try:
         response = requests.get(follower_url, headers=get_headers())
         if response.status_code == 200:
-            return response.json()
+            details = response.json()
+            cache["user_details"][follower_url] = details
+            return details
         elif response.status_code == 403:
              print("Rate limit hit! Sleeping for 60 seconds...")
              time.sleep(60)
-             return get_user_details(follower_url) # Retry
+             return get_user_details(follower_url, cache) # Retry
     except Exception as e:
         print(f"Error: {e}")
     return None
@@ -112,28 +146,35 @@ def plot_demographics(locations):
     plt.show()
 
 def main():
+    # 0. Load cache
+    cache = load_cache()
+
     # 1. Get list of followers
-    followers_list = get_followers(GITHUB_USERNAME)
+    followers_list = get_followers(GITHUB_USERNAME, cache)
     print(f"Total followers found: {len(followers_list)}")
     
     if not followers_list:
         return
 
     # 2. Fetch details for each follower to get 'location'
-    # NOTE: This performs 1 API call per follower. 
-    # If you have 1000+ followers, this will take time and eat rate limits.
     locations = []
-    print("Fetching follower details (this may take a moment)...")
+    print("Fetching follower details (using cache where available)...")
     
     for i, follower in enumerate(followers_list):
-        details = get_user_details(follower['url'])
+        details = get_user_details(follower['url'], cache)
         if details:
             loc = clean_location(details.get('location'))
             locations.append(loc)
         
-        # Progress bar
-        if (i + 1) % 10 == 0:
+        # Save cache every 50 records to prevent data loss on long runs
+        if (i + 1) % 50 == 0:
+            save_cache(cache)
+            print(f"  Processed {i + 1}/{len(followers_list)} profiles (Cache saved)...")
+        elif (i + 1) % 10 == 0:
             print(f"  Processed {i + 1}/{len(followers_list)} profiles...")
+
+    # Final cache save
+    save_cache(cache)
 
     # 3. Plot the data
     print("Plotting data...")
