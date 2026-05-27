@@ -171,7 +171,7 @@ def main():
 
     # 2. Fetch details for each follower to get 'location'
     locations = []
-    print("Fetching follower details (using idempotent cache where available)...")
+    print("Fetching follower details (using cache where available)...")
     
     for i, follower in enumerate(followers_list):
         login = follower['login']
