@@ -59,15 +59,26 @@
 
 ## 📖 Usage
 
-1. Open `github_followers_analytics.py`.
-2. Update the `GITHUB_USERNAME` variable with the target user's name:
-   ```python
-   GITHUB_USERNAME = 'your-username-here'
+### 🌐 Web Dashboard (Recommended)
+The project now includes a modern, interactive web interface.
+1. Navigate to the `web_ui` directory:
+   ```bash
+   cd web_ui
    ```
-3. Run the script:
+2. Start the FastAPI server:
+   ```bash
+   python main.py
+   ```
+3. Open your browser and go to `http://127.0.0.1:8000`.
+4. Enter any GitHub username to see their follower demographics!
+
+### 💻 CLI Version
+You can still run the analysis directly from your terminal.
+1. Run the script:
    ```bash
    python github_followers_analytics.py
    ```
+   *Note: To change the target user in CLI, update the `GITHUB_USERNAME` variable in `github_followers_analytics.py`.*
 
 ---
 

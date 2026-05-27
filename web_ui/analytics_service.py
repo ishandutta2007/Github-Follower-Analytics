@@ -1,0 +1,171 @@
+from collections import Counter
+from dotenv import load_dotenv
+import os
+import requests
+import time
+import json
+
+FOLLOWERS_CACHE_FILE = 'followers_cache.json'
+USERS_CACHE_FILE = 'users_cache.json'
+CACHE_EXPIRY_24H = 24 * 60 * 60  # 24 hours in seconds
+
+load_dotenv()
+ADMIN_TOKEN = os.getenv("ADMIN_TOKEN")
+
+def load_json_file(file_path, default_value):
+    if os.path.exists(file_path):
+        try:
+            with open(file_path, 'r') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Error loading {file_path}: {e}")
+    return default_value
+
+def save_json_file(file_path, data):
+    try:
+        with open(file_path, 'w') as f:
+            json.dump(data, f, indent=4)
+    except Exception as e:
+        print(f"Error saving {file_path}: {e}")
+
+def get_headers():
+    headers = {'Accept': 'application/vnd.github.v3+json'}
+    if ADMIN_TOKEN and ADMIN_TOKEN != 'your_personal_access_token_here':
+        headers['Authorization'] = f'token {ADMIN_TOKEN}'
+    return headers
+
+def fetch_followers(username, followers_cache):
+    current_time = time.time()
+    
+    if username in followers_cache:
+        cached_data = followers_cache[username]
+        if current_time - cached_data.get('timestamp', 0) < CACHE_EXPIRY_24H:
+            return cached_data['data'], False
+
+    followers = []
+    page = 1
+    url = f"https://api.github.com/users/{username}/followers"
+    
+    while True:
+        params = {'per_page': 100, 'page': page}
+        response = requests.get(url, headers=get_headers(), params=params)
+        if response.status_code != 200:
+            break
+        data = response.json()
+        if not data:
+            break
+        followers.extend(data)
+        page += 1
+        
+    if followers:
+        followers_cache[username] = {
+            "timestamp": current_time,
+            "data": followers
+        }
+        save_json_file(FOLLOWERS_CACHE_FILE, followers_cache)
+    return followers, True
+
+def fetch_user_details(username, follower_url, users_cache):
+    if username in users_cache:
+        return users_cache[username], False
+
+    try:
+        response = requests.get(follower_url, headers=get_headers())
+        if response.status_code == 200:
+            details = response.json()
+            users_cache[username] = details
+            return details, True
+        elif response.status_code == 403:
+             time.sleep(60)
+             return fetch_user_details(username, follower_url, users_cache)
+    except Exception as e:
+        print(f"Error: {e}")
+    return None, False
+
+def clean_location(location):
+    if not location:
+        return "Unknown"
+    loc = location.strip().title()
+    if "United States" in loc or "Usa" in loc or "Us" == loc:
+        return "United States"
+    if "China" in loc or "Cn" == loc:
+        return "China"
+    if "India" in loc:
+        return "India"
+    if "London" in loc or "Uk" == loc:
+        return "United Kingdom"
+    return loc
+
+def get_analytics_generator(target_username):
+    """Generator version that yields logs and final data."""
+    followers_cache = load_json_file(FOLLOWERS_CACHE_FILE, {})
+    users_cache = load_json_file(USERS_CACHE_FILE, {})
+
+    yield {"type": "log", "message": f"🚀 Starting analytics for {target_username}..."}
+    
+    # 1. Fetch followers
+    if target_username in followers_cache and (time.time() - followers_cache[target_username].get('timestamp', 0) < CACHE_EXPIRY_24H):
+        yield {"type": "log", "message": f"Using cached followers list for {target_username}..."}
+    else:
+        yield {"type": "log", "message": f"Fetching followers for {target_username} from GitHub API..."}
+        
+    followers_list, fetched_list_from_api = fetch_followers(target_username, followers_cache)
+    
+    if not followers_list:
+        yield {"type": "error", "message": f"No followers found for {target_username} or API error."}
+        return
+
+    yield {"type": "log", "message": f"Total followers found: {len(followers_list)}"}
+    yield {"type": "log", "message": "Fetching follower details..."}
+    
+    results = []
+    locations = []
+    
+    for i, follower in enumerate(followers_list):
+        login = follower['login']
+        url = follower['url']
+        
+        details, fetched_from_api = fetch_user_details(login, url, users_cache)
+        
+        if details:
+            loc = clean_location(details.get('location'))
+            locations.append(loc)
+            source = "API" if fetched_from_api else "CACHE"
+            results.append({
+                "username": login,
+                "location": loc,
+                "source": source
+            })
+            yield {"type": "log", "message": f"  [{source}] {login}"}
+        
+        # Save users cache every 50 records
+        if (i + 1) % 50 == 0:
+            save_json_file(USERS_CACHE_FILE, users_cache)
+            yield {"type": "log", "message": f"  --- Processed {i + 1}/{len(followers_list)} profiles (Cache saved) ---"}
+        elif (i + 1) % 10 == 0:
+             yield {"type": "log", "message": f"  --- Processed {i + 1}/{len(followers_list)} profiles ---"}
+            
+    save_json_file(USERS_CACHE_FILE, users_cache)
+    
+    location_counts = Counter(locations)
+    
+    final_data = {
+        "target_username": target_username,
+        "total_followers": len(followers_list),
+        "location_stats": location_counts.most_common(),
+        "details": results
+    }
+    
+    yield {"type": "data", "payload": final_data}
+
+def get_analytics(target_username):
+    """Sync version for CLI, consumes the generator."""
+    final_data = None
+    for item in get_analytics_generator(target_username):
+        if item["type"] == "log":
+            print(item["message"])
+        elif item["type"] == "error":
+            print(f"ERROR: {item['message']}")
+        elif item["type"] == "data":
+            final_data = item["payload"]
+    return final_data

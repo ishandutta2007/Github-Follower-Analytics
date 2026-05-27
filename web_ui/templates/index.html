@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Follower Analytics</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 GitHub Follower Analytics</h1>
+            <p>Understand your audience's geographical distribution.</p>
+        </header>
+
+        <section class="input-section">
+            <div class="form-group">
+                <input type="text" id="username" placeholder="Enter GitHub Username" aria-label="GitHub Username">
+                <button id="analyze-btn">Analyze</button>
+            </div>
+            <div id="status-message"></div>
+        </section>
+
+        <section id="console-section" class="hidden">
+            <h3>Console Output</h3>
+            <div id="console" class="terminal"></div>
+        </section>
+
+        <main id="results" class="hidden">
+            <div class="summary-cards">
+                <div class="card">
+                    <h3 id="target-user">User</h3>
+                    <p>Target Profile</p>
+                </div>
+                <div class="card">
+                    <h3 id="follower-count">0</h3>
+                    <p>Total Followers</p>
+                </div>
+            </div>
+
+            <div class="visuals">
+                <div class="chart-container">
+                    <canvas id="locationChart"></canvas>
+                </div>
+                <div class="table-container">
+                    <h3>Top Locations</h3>
+                    <table id="stats-table">
+                        <thead>
+                            <tr>
+                                <th>Location</th>
+                                <th>Count</th>
+                                <th>Percentage</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <section class="details-section">
+                <h3>Follower Details</h3>
+                <div class="scroll-container">
+                    <table id="details-table">
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Location</th>
+                                <th>Data Source</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+
+        <div id="loader" class="hidden">
+            <div class="spinner"></div>
+            <p>Fetching and analyzing data... this may take a moment.</p>
+        </div>
+    </div>
+    <script src="/static/script.js"></script>
+</body>
+</html>
