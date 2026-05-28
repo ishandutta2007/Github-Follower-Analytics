@@ -6,4 +6,4 @@ temp_repo_clone
 contributors.txt
 followers_cache.json
 users_cache.json
-old_github_cache.json
+web_ui/__pycache__
