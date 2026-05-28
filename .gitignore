@@ -6,4 +6,4 @@ temp_repo_clone
 contributors.txt
 followers_cache.json
 users_cache.json
-web_ui/__pycache__
+web_ui/__pycache__/*
