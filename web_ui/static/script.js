@@ -6,7 +6,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusMessage = document.getElementById('status-message');
     const consoleDiv = document.getElementById('console');
     const consoleSection = document.getElementById('console-section');
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+    const elapsedDisplay = document.getElementById('elapsed-time');
+    const etaDisplay = document.getElementById('eta-time');
+    
     let locationChart = null;
+    let startTime = null;
+    let timerInterval = null;
 
     const lastUsername = localStorage.getItem('last_github_username');
     usernameInput.value = lastUsername || 'ishandutta2007';
@@ -26,6 +33,19 @@ document.addEventListener('DOMContentLoaded', () => {
         consoleDiv.innerHTML = '';
         loader.classList.remove('hidden');
         statusMessage.textContent = '';
+        
+        // Reset Timers & Progress
+        progressBar.style.width = '0%';
+        progressText.textContent = '0 / 0 profiles';
+        elapsedDisplay.textContent = 'Elapsed: 0s';
+        etaDisplay.textContent = 'ETA: Calculating...';
+        startTime = Date.now();
+        
+        if (timerInterval) clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            elapsedDisplay.textContent = `Elapsed: ${elapsed}s`;
+        }, 1000);
 
         try {
             const response = await fetch(`/analyze?username=${encodeURIComponent(username)}`);
@@ -68,13 +88,29 @@ document.addEventListener('DOMContentLoaded', () => {
             line.textContent = item.message;
             consoleDiv.appendChild(line);
             consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        } else if (item.type === 'progress') {
+            const { current, total } = item;
+            const percent = ((current / total) * 100).toFixed(1);
+            progressBar.style.width = `${percent}%`;
+            progressText.textContent = `${current} / ${total} profiles`;
+            
+            // Calculate ETA
+            const elapsedMs = Date.now() - startTime;
+            if (current > 0) {
+                const msPerItem = elapsedMs / current;
+                const remainingItems = total - current;
+                const etaSeconds = Math.round((msPerItem * remainingItems) / 1000);
+                etaDisplay.textContent = `ETA: ${etaSeconds}s`;
+            }
         } else if (item.type === 'error') {
+            if (timerInterval) clearInterval(timerInterval);
             const line = document.createElement('div');
             line.textContent = '❌ ERROR: ' + item.message;
             line.style.color = '#f85149';
             consoleDiv.appendChild(line);
             consoleDiv.scrollTop = consoleDiv.scrollHeight;
         } else if (item.type === 'data') {
+            if (timerInterval) clearInterval(timerInterval);
             renderResults(item.payload);
         }
     }

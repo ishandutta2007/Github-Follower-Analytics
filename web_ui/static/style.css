@@ -133,7 +133,40 @@ th { background-color: #f6f8fa; position: sticky; top: 0; }
 
 #loader {
     text-align: center;
-    padding: 3rem;
+    padding: 2rem;
+    background: var(--card-bg);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    margin-bottom: 2rem;
+}
+
+.timer-display {
+    margin: 1rem 0;
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #57606a;
+}
+
+.progress-container {
+    width: 100%;
+    background-color: #d0d7de;
+    border-radius: 6px;
+    height: 12px;
+    margin: 1rem 0;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background-color: var(--primary-color);
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+#progress-text {
+    margin: 0;
+    color: #57606a;
+    font-size: 0.9rem;
 }
 
 .spinner {

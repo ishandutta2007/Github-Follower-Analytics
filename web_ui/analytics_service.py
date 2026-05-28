@@ -4,12 +4,62 @@ import os
 import requests
 import time
 import json
+import pycountry
 
 # Resolve cache paths relative to this file's directory (go up one level to root)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FOLLOWERS_CACHE_FILE = os.path.join(BASE_DIR, 'followers_cache.json')
 USERS_CACHE_FILE = os.path.join(BASE_DIR, 'users_cache.json')
 CACHE_EXPIRY_24H = 24 * 60 * 60  # 24 hours in seconds
+
+# Pre-compute country mappings for faster lookups
+COUNTRIES = {c.name.lower(): c.name for c in pycountry.countries}
+COUNTRY_CODES = {c.alpha_2.lower(): c.name for c in pycountry.countries}
+# Special common cases not easily caught by pycountry or common variations
+COUNTRY_ALIASES = {
+    "usa": "United States",
+    "us": "United States",
+    "uk": "United Kingdom",
+    "uae": "United Arab Emirates",
+    "russia": "Russian Federation",
+    "korea": "Korea, Republic of",
+    "vietnam": "Viet Nam"
+}
+
+# Mapping of major tech hubs/cities to countries
+CITY_TO_COUNTRY = {
+    "san francisco": "United States", "new york": "United States", "seattle": "United States", 
+    "austin": "United States", "chicago": "United States", "los angeles": "United States",
+    "mountain view": "United States", "palo alto": "United States", "boston": "United States",
+    "bangalore": "India", "bengaluru": "India", "hyderabad": "India", "pune": "India", 
+    "mumbai": "India", "delhi": "India", "chennai": "India", "gurgaon": "India",
+    "london": "United Kingdom", "manchester": "United Kingdom", "cambridge": "United Kingdom",
+    "berlin": "Germany", "munich": "Germany", "hamburg": "Germany",
+    "paris": "France", "lyon": "France",
+    "tokyo": "Japan", "osaka": "Japan",
+    "beijing": "China", "shanghai": "China", "shenzhen": "China",
+    "toronto": "Canada", "vancouver": "Canada", "montreal": "Canada",
+    "sydney": "Australia", "melbourne": "Australia",
+    "singapore": "Singapore", "amsterdam": "Netherlands", "tel aviv": "Israel",
+    "stockholm": "Sweden", "helsinki": "Finland", "oslo": "Norway",
+    "berlin": "Germany", "munich": "Germany", "hamburg": "Germany",
+    "paris": "France", "lyon": "France",
+    "madrid": "Spain", "barcelona": "Spain",
+    "rome": "Italy", "milan": "Italy",
+    "vienna": "Austria", "zurich": "Switzerland", "geneva": "Switzerland",
+    "warsaw": "Poland", "krakow": "Poland",
+    "prague": "Czech Republic", "budapest": "Hungary",
+    "moscow": "Russian Federation", "saint petersburg": "Russian Federation",
+    "kyiv": "Ukraine", "bucharest": "Romania",
+    "istanbul": "Turkey", "ankara": "Turkey",
+    "dubai": "United Arab Emirates", "abu dhabi": "United Arab Emirates",
+    "riyadh": "Saudi Arabia", "tehran": "Iran",
+    "cairo": "Egypt", "lagos": "Nigeria", "nairobi": "Kenya", "cape town": "South Africa",
+    "johannesburg": "South Africa",
+    "mexico city": "Mexico", "sao paulo": "Brazil", "rio de janeiro": "Brazil",
+    "buenos aires": "Argentina", "santiago": "Chile", "bogota": "Colombia",
+    "lima": "Peru"
+}
 
 load_dotenv()
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN")
@@ -84,19 +134,60 @@ def fetch_user_details(username, follower_url, users_cache):
         print(f"Error: {e}")
     return None, False
 
-def clean_location(location):
-    if not location:
+def normalize_location(text):
+    """Deep cleaning and country detection from a text string."""
+    if not text:
         return "Unknown"
-    loc = location.strip().title()
-    if "United States" in loc or "Usa" in loc or "Us" == loc:
-        return "United States"
-    if "China" in loc or "Cn" == loc:
-        return "China"
-    if "India" in loc:
-        return "India"
-    if "London" in loc or "Uk" == loc:
-        return "United Kingdom"
-    return loc
+    
+    text_lower = text.lower().strip()
+    
+    # 1. Direct Alias Check
+    if text_lower in COUNTRY_ALIASES:
+        return COUNTRY_ALIASES[text_lower]
+        
+    # 2. City Mapping Check (e.g., "San Francisco" -> "United States")
+    for city, country in CITY_TO_COUNTRY.items():
+        if city in text_lower:
+            return country
+            
+    # 3. Country Name Search (e.g., "Working in Germany")
+    for country_lower, country_name in COUNTRIES.items():
+        # Match only if it's a whole word to avoid things like "Indiana" matching "India"
+        if f" {country_lower} " in f" {text_lower} " or text_lower == country_lower:
+            return country_name
+            
+    # 4. Country Code Check (e.g., "London, UK")
+    parts = [p.strip().strip('()[]{}') for p in text.replace(',', ' ').replace('.', ' ').split()]
+    for part in reversed(parts):
+        part_lower = part.lower()
+        if part_lower in COUNTRY_CODES:
+            return COUNTRY_CODES[part_lower]
+        if part_lower in COUNTRY_ALIASES:
+            return COUNTRY_ALIASES[part_lower]
+            
+    return "Unknown"
+
+def infer_country(details):
+    """Infers country from user profile details (location and name)."""
+    if not details:
+        return "Unknown"
+    
+    location = details.get('location')
+    name = details.get('name')
+    
+    # Priority 1: Location field
+    if location:
+        country = normalize_location(location)
+        if country != "Unknown":
+            return country
+            
+    # Priority 2: Name field (fallback)
+    if name:
+        country = normalize_location(name)
+        if country != "Unknown":
+            return country
+            
+    return "Unknown"
 
 def get_analytics_generator(target_username):
     """Generator version that yields logs and final data."""
@@ -118,19 +209,23 @@ def get_analytics_generator(target_username):
         return
 
     yield {"type": "log", "message": f"Total followers found: {len(followers_list)}"}
-    yield {"type": "log", "message": "Fetching follower details..."}
+    yield {"type": "log", "message": "Fetching and inferring follower demographics..."}
     
     results = []
     locations = []
+    total = len(followers_list)
     
     for i, follower in enumerate(followers_list):
         login = follower['login']
         url = follower['url']
         
+        # Yield progress for UI timers
+        yield {"type": "progress", "current": i + 1, "total": total}
+        
         details, fetched_from_api = fetch_user_details(login, url, users_cache)
         
         if details:
-            loc = clean_location(details.get('location'))
+            loc = infer_country(details)
             locations.append(loc)
             source = "API" if fetched_from_api else "CACHE"
             results.append({
@@ -138,7 +233,7 @@ def get_analytics_generator(target_username):
                 "location": loc,
                 "source": source
             })
-            yield {"type": "log", "message": f"  [{source}] {login}"}
+            yield {"type": "log", "message": f"  [{source}] {login} -> {loc}"}
         
         # Save users cache every 50 records
         if (i + 1) % 50 == 0:
