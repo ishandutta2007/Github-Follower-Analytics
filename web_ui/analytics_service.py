@@ -61,6 +61,26 @@ CITY_TO_COUNTRY = {
     "lima": "Peru"
 }
 
+# Mapping of popula sirnames to countries
+SIRNAME_TO_COUNTRY = {
+    "Aggarwal": "India", "Sharma": "India", "Gupta": "India", "Singh": "India", "Kumar": "India", "Patel": "India",
+    "Wang": "China", "Li": "China", "Zhang": "China", "Chen": "China", "Liu": "China", "Yang": "China", "Huang": "China",
+    "Nguyen": "Viet Nam", "Tran": "Viet Nam", "Le": "Viet Nam", "Pham": "Viet Nam", "Huynh": "Viet Nam",
+    "Sato": "Japan", "Suzuki": "Japan", "Takahashi": "Japan", "Tanaka": "Japan", "Watanabe": "Japan", "Ito": "Japan",
+    "Kim": "Korea, Republic of", "Lee": "Korea, Republic of", "Park": "Korea, Republic of", "Choi": "Korea, Republic of", "Jung": "Korea, Republic of",
+    "Ivanov": "Russian Federation", "Kuznetsov": "Russian Federation", "Popov": "Russian Federation", "Sokolov": "Russian Federation",
+    "Silva": "Brazil", "Santos": "Brazil", "Oliveira": "Brazil", "Souza": "Brazil", "Rodrigues": "Brazil",
+    "Mueller": "Germany", "Schmidt": "Germany", "Schneider": "Germany", "Fischer": "Germany", "Weber": "Germany",
+    "Martin": "France", "Bernard": "France", "Thomas": "France", "Petit": "France", "Robert": "France",
+    "Garcia": "Spain", "Rodriguez": "Spain", "Gonzalez": "Spain", "Fernandez": "Spain", "Lopez": "Spain",
+    "Rossi": "Italy", "Russo": "Italy", "Ferrari": "Italy", "Esposito": "Italy", "Bianchi": "Italy",
+    "Ahmed": "Egypt", "Ali": "Egypt", "Hassan": "Egypt", "Ibrahim": "Egypt",
+    "Muller": "Germany", "Schulz": "Germany", "Wagner": "Germany", "Becker": "Germany", "Hoffmann": "Germany",
+    "Novak": "Poland", "Kowalski": "Poland", "Wisniewski": "Poland", "Wojcik": "Poland", "Kowalczyk": "Poland",
+    "Smirnov": "Russian Federation", "Petrov": "Russian Federation", "Volkov": "Russian Federation",
+    "Das": "India", "Banerjee": "India", "Chatterjee": "India", "Mukherjee": "India", "Nair": "India", "Reddy": "India"
+}
+
 load_dotenv()
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN")
 
@@ -165,6 +185,12 @@ def normalize_location(text):
         if part_lower in COUNTRY_ALIASES:
             return COUNTRY_ALIASES[part_lower]
             
+    # 5. Sirname Mapping Check (e.g., "Aggarwal" -> "India")
+    parts_lower = [p.lower() for p in parts]
+    for sirname, country in SIRNAME_TO_COUNTRY.items():
+        if sirname.lower() in parts_lower:
+            return country
+            
     return "Unknown"
 
 def infer_country(details):
@@ -226,6 +252,7 @@ def get_analytics_generator(target_username):
         
         if details:
             loc = infer_country(details)
+            name = details.get('name')
             locations.append(loc)
             source = "API" if fetched_from_api else "CACHE"
             results.append({
@@ -233,7 +260,7 @@ def get_analytics_generator(target_username):
                 "location": loc,
                 "source": source
             })
-            yield {"type": "log", "message": f"  [{source}] {login} -> {loc}"}
+            yield {"type": "log", "message": f"  [{source}] {login} ({name}) -> {loc}"}
         
         # Save users cache every 50 records
         if (i + 1) % 50 == 0:
