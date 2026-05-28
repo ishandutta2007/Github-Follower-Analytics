@@ -13,9 +13,11 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 templates = Jinja2Templates(directory="templates")
 
+
 @app.get("/", response_class=HTMLResponse)
 async def read_item(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
+
 
 @app.get("/analyze")
 async def analyze(username: str):
@@ -29,6 +31,8 @@ async def analyze(username: str):
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
+
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="127.0.0.1", port=8000)
