@@ -26,9 +26,12 @@ COUNTRY_ALIASES = {
     "vietnam": "Viet Nam",
 }
 
+
 # Mapping of major tech hubs/cities to countries
 def load_city_to_country():
-    json_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "city_to_country.json")
+    json_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "city_to_country.json"
+    )
     return load_json_file(json_path, {})
 
 
