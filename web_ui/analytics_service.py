@@ -11,6 +11,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FOLLOWERS_CACHE_FILE = os.path.join(BASE_DIR, "followers_cache.json")
 USERS_CACHE_FILE = os.path.join(BASE_DIR, "users_cache.json")
 CACHE_EXPIRY_24H = 24 * 60 * 60  # 24 hours in seconds
+DEBUG_FLAG = True
 
 
 def load_json_file(file_path, default_value):
@@ -253,10 +254,15 @@ def get_analytics_generator(target_username):
             source = "API" if fetched_from_api else "CACHE"
             results.append({"username": login, "location": loc, "source": source})
             rawloc = details.get("location")
-            if loc == "Unknown" and rawloc != None:
+            if DEBUG_FLAG == True and loc == "Unknown" and rawloc != None:
                 yield {
                     "type": "log",
                     "message": f" [{source}] {login} [{name}][{rawloc}]-> {loc}",
+                }
+            else:
+                yield {
+                    "type": "log",
+                    "message": f" [{source}] {login} [{name}]-> {loc}",
                 }
 
         # Save users cache every 50 records
