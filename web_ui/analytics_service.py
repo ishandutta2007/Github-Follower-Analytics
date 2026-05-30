@@ -50,6 +50,7 @@ CITY_TO_COUNTRY = {
     "bordeaux": "France",
     "boston": "United States",
     "boulder": "United States",
+    "brasil": "Brazil",
     "brisbane": "Australia",
     "bristol": "United Kingdom",
     "brussels": "Belgium",
@@ -109,8 +110,9 @@ CITY_TO_COUNTRY = {
     "jakarta": "Indonesia",
     "jerusalem": "Israel",
     "johannesburg": "South Africa",
-    "karachi": "Pakistan",
+    "jundiaí": "Brazil",
     "kaohsiung": "Taiwan",
+    "karachi": "Pakistan",
     "krakow": "Poland",
     "kuala lumpur": "Malaysia",
     "kuwait city": "Kuwait",
@@ -150,9 +152,10 @@ CITY_TO_COUNTRY = {
     "naples": "Italy",
     "nashville": "United States",
     "new york": "United States",
-    "nyc": "United States",
     "nice": "France",
     "nicosia": "Cyprus",
+    "niterói": "Brazil",
+    "nyc": "United States",
     "osaka": "Japan",
     "oslo": "Norway",
     "ottawa": "Canada",
@@ -162,9 +165,9 @@ CITY_TO_COUNTRY = {
     "philadelphia": "United States",
     "phoenix": "United States",
     "pittsburgh": "United States",
-    "porto": "Portugal",
-    "porto alegre": "Brazil",
     "portland": "United States",
+    "porto alegre": "Brazil",
+    "porto": "Portugal",
     "prague": "Czech Republic",
     "pretoria": "South Africa",
     "pune": "India",
@@ -181,15 +184,16 @@ CITY_TO_COUNTRY = {
     "salt lake city": "United States",
     "san diego": "United States",
     "san francisco": "United States",
-    "sf": "United States",
     "san jose": "United States",
     "santiago": "Chile",
     "santo domingo": "Dominican Republic",
     "sao paulo": "Brazil",
     "sapporo": "Japan",
+    "scotland": "Scotland",
     "seattle": "United States",
     "seoul": "Korea, Republic of",
     "seville": "Spain",
+    "sf": "United States",
     "shanghai": "China",
     "shenzhen": "China",
     "singapore": "Singapore",
@@ -198,6 +202,7 @@ CITY_TO_COUNTRY = {
     "stuttgart": "Germany",
     "surabaya": "Indonesia",
     "sydney": "Australia",
+    "são Paulo": "Brazil",
     "taipei": "Taiwan",
     "tallinn": "Estonia",
     "tashkent": "Uzbekistan",
@@ -853,7 +858,9 @@ def get_analytics_generator(target_username):
             locations.append(loc)
             source = "API" if fetched_from_api else "CACHE"
             results.append({"username": login, "location": loc, "source": source})
-            yield {"type": "log", "message": f"  [{source}] {login} [{name}]-> {loc}"}
+            rawloc = details.get("location")
+            if loc=="Unknown" and rawloc!=None:
+                yield {"type": "log", "message": f" [{source}] {login} [{name}][{rawloc}]-> {loc}"}
 
         # Save users cache every 50 records
         if (i + 1) % 50 == 0:
