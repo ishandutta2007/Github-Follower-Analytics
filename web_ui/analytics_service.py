@@ -859,8 +859,11 @@ def get_analytics_generator(target_username):
             source = "API" if fetched_from_api else "CACHE"
             results.append({"username": login, "location": loc, "source": source})
             rawloc = details.get("location")
-            if loc=="Unknown" and rawloc!=None:
-                yield {"type": "log", "message": f" [{source}] {login} [{name}][{rawloc}]-> {loc}"}
+            if loc == "Unknown" and rawloc != None:
+                yield {
+                    "type": "log",
+                    "message": f" [{source}] {login} [{name}][{rawloc}]-> {loc}",
+                }
 
         # Save users cache every 50 records
         if (i + 1) % 50 == 0:
