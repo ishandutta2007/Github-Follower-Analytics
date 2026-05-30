@@ -51,7 +51,9 @@ def load_city_to_country():
     json_path = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "city_to_country.json"
     )
-    return load_json_file(json_path, {})
+    data = load_json_file(json_path, {})
+    # Lowercase all keys for case-insensitive matching
+    return {k.lower().strip(): v for k, v in data.items()}
 
 
 CITY_TO_COUNTRY = load_city_to_country()
@@ -62,7 +64,9 @@ def load_sirname_to_country():
     json_path = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "sirname_to_country.json"
     )
-    return load_json_file(json_path, {})
+    data = load_json_file(json_path, {})
+    # Lowercase all keys for case-insensitive matching
+    return {k.lower().strip(): v for k, v in data.items()}
 
 
 SIRNAME_TO_COUNTRY = load_sirname_to_country()
@@ -130,39 +134,41 @@ def normalize_location(text):
     if not text:
         return "Unknown"
 
+    # Deep clean text: lowercase, strip, remove common punctuation
     text_lower = text.lower().strip()
+    # Normalize separators to spaces for word matching
+    search_text = f" {text_lower.replace(',', ' ').replace('.', ' ')} "
 
     # 1. Direct Alias Check
     if text_lower in COUNTRY_ALIASES:
         return COUNTRY_ALIASES[text_lower]
 
-    # 2. City Mapping Check (e.g., "San Francisco" -> "United States")
-    for city, country in CITY_TO_COUNTRY.items():
-        if city in text_lower:
-            return country
-
-    # 3. Country Name Search (e.g., "Working in Germany")
+    # 2. Country Name Search (e.g., "Working in Germany")
     for country_lower, country_name in COUNTRIES.items():
         # Match only if it's a whole word to avoid things like "Indiana" matching "India"
-        if f" {country_lower} " in f" {text_lower} " or text_lower == country_lower:
+        if f" {country_lower} " in search_text:
             return country_name
+
+    # 3. City Mapping Check (e.g., "San Francisco" -> "United States")
+    # Sort cities by length (longest first) to avoid matching "Delhi" in "New Delhi"
+    for city in sorted(CITY_TO_COUNTRY.keys(), key=len, reverse=True):
+        if f" {city} " in search_text:
+            return CITY_TO_COUNTRY[city]
 
     # 4. Country Code Check (e.g., "London, UK")
     parts = [
         p.strip().strip("()[]{}")
-        for p in text.replace(",", " ").replace(".", " ").split()
+        for p in text_lower.replace(",", " ").replace(".", " ").split()
     ]
     for part in reversed(parts):
-        part_lower = part.lower()
-        if part_lower in COUNTRY_CODES:
-            return COUNTRY_CODES[part_lower]
-        if part_lower in COUNTRY_ALIASES:
-            return COUNTRY_ALIASES[part_lower]
+        if part in COUNTRY_CODES:
+            return COUNTRY_CODES[part]
+        if part in COUNTRY_ALIASES:
+            return COUNTRY_ALIASES[part]
 
     # 5. Sirname Mapping Check (e.g., "Aggarwal" -> "India")
-    parts_lower = [p.lower() for p in parts]
     for sirname, country in SIRNAME_TO_COUNTRY.items():
-        if sirname.lower() in parts_lower:
+        if sirname in parts:
             return country
 
     return "Unknown"
