@@ -16,7 +16,7 @@ CACHE_EXPIRY_24H = 24 * 60 * 60  # 24 hours in seconds
 def load_json_file(file_path, default_value):
     if os.path.exists(file_path):
         try:
-            with open(file_path, "r") as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception as e:
             print(f"Error loading {file_path}: {e}")
@@ -25,7 +25,7 @@ def load_json_file(file_path, default_value):
 
 def save_json_file(file_path, data):
     try:
-        with open(file_path, "w") as f:
+        with open(file_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)
     except Exception as e:
         print(f"Error saving {file_path}: {e}")
