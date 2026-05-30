@@ -12,6 +12,25 @@ FOLLOWERS_CACHE_FILE = os.path.join(BASE_DIR, "followers_cache.json")
 USERS_CACHE_FILE = os.path.join(BASE_DIR, "users_cache.json")
 CACHE_EXPIRY_24H = 24 * 60 * 60  # 24 hours in seconds
 
+
+def load_json_file(file_path, default_value):
+    if os.path.exists(file_path):
+        try:
+            with open(file_path, "r") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Error loading {file_path}: {e}")
+    return default_value
+
+
+def save_json_file(file_path, data):
+    try:
+        with open(file_path, "w") as f:
+            json.dump(data, f, indent=4)
+    except Exception as e:
+        print(f"Error saving {file_path}: {e}")
+
+
 # Pre-compute country mappings for faster lookups
 COUNTRIES = {c.name.lower(): c.name for c in pycountry.countries}
 COUNTRY_CODES = {c.alpha_2.lower(): c.name for c in pycountry.countries}
@@ -50,24 +69,6 @@ SIRNAME_TO_COUNTRY = load_sirname_to_country()
 
 load_dotenv()
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN")
-
-
-def load_json_file(file_path, default_value):
-    if os.path.exists(file_path):
-        try:
-            with open(file_path, "r") as f:
-                return json.load(f)
-        except Exception as e:
-            print(f"Error loading {file_path}: {e}")
-    return default_value
-
-
-def save_json_file(file_path, data):
-    try:
-        with open(file_path, "w") as f:
-            json.dump(data, f, indent=4)
-    except Exception as e:
-        print(f"Error saving {file_path}: {e}")
 
 
 def get_headers():
