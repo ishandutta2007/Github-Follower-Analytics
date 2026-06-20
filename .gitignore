@@ -8,4 +8,4 @@ followers_cache.json
 followers_cache.csv
 users_cache.json
 users_cache.csv
-web_ui/__pycache__/*
+web_ui/__pycache__/*cache/  
