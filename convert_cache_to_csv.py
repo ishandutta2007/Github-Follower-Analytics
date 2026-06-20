@@ -95,7 +95,9 @@ if __name__ == "__main__":
         description="Convert GitHub analytics JSON caches to CSV."
     )
     parser.add_argument(
-        "input", nargs="?", help="The JSON file to convert (e.g., cache/followers_cache.json)"
+        "input",
+        nargs="?",
+        help="The JSON file to convert (e.g., cache/followers_cache.json)",
     )
     parser.add_argument(
         "--columns",
