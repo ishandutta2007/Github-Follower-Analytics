@@ -1,10 +1,11 @@
-__pycache__/
-temp_repo_clone
-*.bk
 *.bak
+*.bk
 *.env
+.ruff_cache
+__pycache__/
 contributors.txt
-followers_cache.json
 followers_cache.csv
-users_cache.json
+followers_cache.json
+temp_repo_clone
 users_cache.csv
+users_cache.json
