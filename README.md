@@ -64,7 +64,7 @@ Get up and running with GitHub Follower Analytics in minutes.
 
    *Option B: Using `pyenv` and `pyenv-virtualenv` (Alternative)*
    ```bash
-   pyenv virtualenv 3.11 github-followers-env
+   pyenv virtualenv 3.11.4 github-followers-env
    pyenv activate github-followers-env
    ```
 
