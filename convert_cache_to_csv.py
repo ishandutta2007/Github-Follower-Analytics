@@ -95,7 +95,7 @@ if __name__ == "__main__":
         description="Convert GitHub analytics JSON caches to CSV."
     )
     parser.add_argument(
-        "input", nargs="?", help="The JSON file to convert (e.g., followers_cache.json)"
+        "input", nargs="?", help="The JSON file to convert (e.g., cache/followers_cache.json)"
     )
     parser.add_argument(
         "--columns",
@@ -116,7 +116,7 @@ if __name__ == "__main__":
         convert_json_to_csv(args.input, output_file, columns)
     else:
         # Default behavior: convert both known caches if they exist
-        for f in ["followers_cache.json", "users_cache.json"]:
+        for f in ["cache/followers_cache.json", "cache/users_cache.json"]:
             if os.path.exists(f):
                 convert_json_to_csv(f, f.replace(".json", ".csv"), columns)
             else:

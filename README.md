@@ -25,8 +25,8 @@
 
 - 🤖 **Automated Data Fetching**: Effortlessly retrieves all followers for any given GitHub username, seamlessly handling pagination.
 - 💾 **Smart Local Caching**: 
-    - **Followers List**: Cached in `followers_cache.json` with a **24-hour expiry** to ensure fresh data daily while avoiding redundant GitHub API calls.
-    - **User Profiles**: Cached in `users_cache.json` using **idempotent logic by username**, ensuring each profile is only fetched once and never re-processed.
+    - **Followers List**: Cached in `cache/followers_cache.json` with a **24-hour expiry** to ensure fresh data daily while avoiding redundant GitHub API calls.
+    - **User Profiles**: Cached in `cache/users_cache.json` using **idempotent logic by username**, ensuring each profile is only fetched once and never re-processed.
 - 🌍 **Location Normalization**: Intelligently cleans and normalizes location strings (e.g., "US", "USA", "United States" ➡️ "United States") for accurate geographic reporting.
 - 📈 **Visual Analytics**: Generates a beautiful pie chart showing the top geographical regions of your followers.
 - ⏳ **Rate Limit Management**: Includes built-in sleep logic to handle GitHub API rate limits gracefully without crashing.

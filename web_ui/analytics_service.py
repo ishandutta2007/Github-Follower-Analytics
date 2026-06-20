@@ -8,8 +8,10 @@ import pycountry
 
 # Resolve cache paths relative to this file's directory (go up one level to root)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-FOLLOWERS_CACHE_FILE = os.path.join(BASE_DIR, "followers_cache.json")
-USERS_CACHE_FILE = os.path.join(BASE_DIR, "users_cache.json")
+CACHE_DIR = os.path.join(BASE_DIR, "cache")
+os.makedirs(CACHE_DIR, exist_ok=True)
+FOLLOWERS_CACHE_FILE = os.path.join(CACHE_DIR, "followers_cache.json")
+USERS_CACHE_FILE = os.path.join(CACHE_DIR, "users_cache.json")
 CACHE_EXPIRY_24H = 24 * 60 * 60  # 24 hours in seconds
 DEBUG_FLAG = True
 
