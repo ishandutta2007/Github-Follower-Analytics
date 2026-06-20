@@ -55,9 +55,17 @@ Get up and running with GitHub Follower Analytics in minutes.
    ```
 
 2. **Set up a virtual environment (highly recommended):**
+
+   *Option A: Using standard `venv`*
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+   *Option B: Using `pyenv` and `pyenv-virtualenv` (Alternative)*
+   ```bash
+   pyenv virtualenv 3.11 github-followers-env
+   pyenv activate github-followers-env
    ```
 
 3. **Install project dependencies:**
